@@ -1,13 +1,14 @@
 import numpy as np
 import cv2
 import time
-import matplotlib.pyplot as plt
-import matplotlib.image as mpimg
+#import matplotlib.pyplot as plt
+#import matplotlib.image as mpimg
 from PIL import ImageFont, ImageTk
 import PIL
 from tkinter import *
 import proc
 import sqlite3
+global counter
 
 
 class Sampleranks:
@@ -21,16 +22,17 @@ class Samplesuits:
         self.name = "Placeholder"
 
 def doall():
-    
+    global counter
     global rtop, stop, rbot, sbot
-
-    im = cv2.imread('cards1a.jpg')
+    counter = counter+1
+    im = cv2.imread('gui' + str(counter) + '.jpg')
     (h, w) = im.shape[:2]
     imtop = im[0:int(h/2), 0:w]
     imbot = im[int(h/2):h, 0:w]
-    
     rtop, stop = lookforit(imtop)
     rbot, sbot = lookforit(imbot)
+    print(rtop)
+    print(stop)
     
 def countit(cardname):
     ranks = ['Ace','Two','Three','Four','Five','Six','Seven',
@@ -44,6 +46,10 @@ def countit(cardname):
 
 
 def charthelp(psum, dsum):
+    if psum > 21:
+        return "You lost, mate"
+    if psum == 21:
+        return "BLACKJACK!"
     if psum < 9:
         return "You should hit!"
     if psum == 9:
@@ -107,7 +113,7 @@ def cvalue():
 
 def purgedb():
     c = conn.cursor()
-    c.execute("DROP TABLE BLACKJACK")
+    c.execute("DROP TABLE IF EXISTS BLACKJACK")
 
 
 def lookforit(im):
@@ -164,17 +170,18 @@ def lookforit(im):
 
         corner = cimage[0:84,0:24]
         corner = cv2.resize(corner, (0,0), fx=4, fy=4)
+        
         white_level = corner[15,int((24*4)/2)]
         thresh_level = white_level - 30
         if (thresh_level <= 0):
             thresh_level = 1
         retval, cornthresh = cv2.threshold(corner, thresh_level, 255,cv2. THRESH_BINARY_INV)
         #if i==2: cv2.imshow('kck', cornthresh)
+        
         rank = cornthresh[0:180,0:96]
         suit = cornthresh[181:336, 0:96]
         rank = proc.resize_rs(rank,125,70)
         suit = proc.resize_rs(suit,100,70)
-        
         #print(best_diff)
 
         best_name = ""
@@ -201,34 +208,21 @@ def lookforit(im):
         #print(best_diff)
         #print(best_suit)
         best_diff = 2000
-    print(listranks)
-    print(listsuits)
-    #    cv2.putText(im, (best_name + ' of '),
-    #                (centr[0]-80, centr[1]-10),5,1,(255,0,0))
-    #    cv2.putText(im, (best_suit),
-    #                (centr[0]-30, centr[1]+10),5,1,(255,0,0))
-    #cv2.drawContours(im,cards, -1, (255,0,0), 2)
-    #cv2.imshow('kck', im)
     return(listranks, listsuits)
 
-if __name__ == '__main__':
 
-    conn = sqlite3.connect('blackjack.db')
-    purgedb()
+def test():
     doall()
-    window = Tk()
-    window.title("Blackjack helper")
-    window.geometry("800x600")
-    btn = Button(window, text="Update", command=doall)
-    btn.config(height="2", width="20")
-    btn.place(x="220", y="550")
-    btn2 = Button(window, text="Shuffle", command=purgedb)
-    btn2.config(height="2", width="20")
-    btn2.place(x="380", y="550")
     size = 100, 125
     w0 = 100
     psumcards = 0
     aces = 0
+    if len(rtop) != len(stop) or len(rbot) != len(sbot):
+        v = Label(window, text="Camera error     ")
+        v.config(font=("Courier", 24), bg="darkred", fg="white")
+        v.place(x=250, y=260)
+        return 0
+        
     for i in range(len(rbot)):
         if rbot[i] == "Ace":
             aces = aces +1
@@ -237,9 +231,9 @@ if __name__ == '__main__':
         load = PIL.Image.open("gr/" + rbot[i] + sbot[i] + ".png")
         load.thumbnail(size, PIL.Image.ANTIALIAS)
         render = ImageTk.PhotoImage(load)
-        img = Label(window, image=render)
-        img.image = render
-        img.place(x=w0,y=370)
+        listofimgb[i] = Label(window, image=render)
+        listofimgb[i].image = render
+        listofimgb[i].place(x=w0,y=370)
         w0 = w0 + 150
     if aces > 0:
         for j in range(aces):
@@ -253,18 +247,24 @@ if __name__ == '__main__':
     w0 = 100
     dsumcards = 0
     aces = 0
+    imgt1 = Label(window, image='')
+    imgt2 = Label(window, image='')
+    imgt3 = Label(window, image='')
+    imgt4 = Label(window, image='')
+    imgt5 = Label(window, image='')
+    listofimgt = [imgt1, imgt2, imgt3, imgt4, imgt5]
     for i in range(len(rtop)):
-        for i in range(len(rtop)):
-            if rtop[i] == "Ace":
-                aces = aces +1
-            else:
-                dsumcards = dsumcards + countit(rtop[i])
+        if rtop[i] == "Ace":
+            aces = aces +1
+        else:
+            dsumcards = dsumcards + countit(rtop[i])
         load = PIL.Image.open("gr/" + rtop[i] + stop[i] + ".png")
+        print(rtop[i] + str(i))
         load.thumbnail(size, PIL.Image.ANTIALIAS)
         render = ImageTk.PhotoImage(load)
-        img = Label(window, image=render)
-        img.image = render
-        img.place(x=w0,y=50)
+        listofimgt[i] = Label(window, image=render)
+        listofimgt[i].image = render
+        listofimgt[i].place(x=w0,y=50)
         w0 = w0 + 150
     if aces > 0:
         for j in range(aces):
@@ -288,11 +288,27 @@ if __name__ == '__main__':
     v = Label(window, text=verd)
     v.config(font=("Courier", 24), bg="darkred", fg="white")
     v.place(x=250, y=260)
-    window.configure(background="darkblue")
-    
-    window.mainloop()
 
 
-    
-    
-    
+counter = 0
+conn = sqlite3.connect('blackjack.db')
+purgedb()
+window = Tk()
+window.title("Blackjack helper")
+window.geometry("800x600")
+btn = Button(window, text="Update", command=test)
+btn.config(height="2", width="20")
+btn.place(x="220", y="550")
+btn2 = Button(window, text="Shuffle", command=purgedb)
+btn2.config(height="2", width="20")
+btn2.place(x="380", y="550")
+
+imgb1 = Label(window, image='')
+imgb2 = Label(window, image='')
+imgb3 = Label(window, image='')
+imgb4 = Label(window, image='')
+imgb5 = Label(window, image='')
+listofimgb = [imgb1, imgb2, imgb3, imgb4, imgb5]
+window.configure(background="darkblue")
+
+window.mainloop()
